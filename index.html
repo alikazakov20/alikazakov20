@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Битрикс24 — Задачи и проекты</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; }
+
+  /* ── Setup screen ── */
+  #setup { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .setup-card { background:#fff; border-radius:16px; padding:40px; max-width:480px; width:100%; box-shadow:0 4px 24px rgba(0,0,0,.10); }
+  .setup-card h1 { font-size:22px; margin-bottom:8px; }
+  .setup-card p  { color:#666; font-size:14px; margin-bottom:24px; line-height:1.5; }
+  .setup-card input { width:100%; border:1.5px solid #d0d5dd; border-radius:8px; padding:12px 14px; font-size:14px; outline:none; }
+  .setup-card input:focus { border-color:#5b5bd6; }
+  .setup-card button { margin-top:16px; width:100%; background:#5b5bd6; color:#fff; border:none; border-radius:8px; padding:12px; font-size:15px; cursor:pointer; font-weight:600; }
+  .setup-card button:hover { background:#4848c2; }
+  .err { color:#e53e3e; font-size:13px; margin-top:8px; }
+
+  /* ── App shell ── */
+  #app { display:none; min-height:100vh; }
+  header { background:#fff; border-bottom:1px solid #e8eaed; padding:0 24px; display:flex; align-items:center; gap:16px; height:56px; }
+  header h1 { font-size:18px; font-weight:700; flex:1; }
+  .tab-btn { background:none; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; color:#666; }
+  .tab-btn.active { background:#5b5bd6; color:#fff; }
+  .reset-btn { background:none; border:1.5px solid #e2e8f0; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; color:#666; }
+  .reset-btn:hover { border-color:#e53e3e; color:#e53e3e; }
+
+  main { padding:24px; max-width:1100px; margin:0 auto; }
+
+  /* ── Toolbar ── */
+  .toolbar { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+  .toolbar select { border:1.5px solid #d0d5dd; border-radius:8px; padding:8px 12px; font-size:14px; outline:none; background:#fff; }
+  .toolbar select:focus { border-color:#5b5bd6; }
+  .btn-primary { background:#5b5bd6; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:14px; font-weight:600; cursor:pointer; }
+  .btn-primary:hover { background:#4848c2; }
+  .search-input { border:1.5px solid #d0d5dd; border-radius:8px; padding:8px 12px; font-size:14px; outline:none; flex:1; min-width:180px; }
+  .search-input:focus { border-color:#5b5bd6; }
+
+  /* ── Task cards ── */
+  .tasks-grid { display:grid; gap:12px; }
+  .task-card { background:#fff; border-radius:12px; padding:16px 20px; box-shadow:0 1px 4px rgba(0,0,0,.06); display:flex; align-items:flex-start; gap:14px; }
+  .task-card:hover { box-shadow:0 2px 12px rgba(0,0,0,.10); }
+  .task-check { width:20px; height:20px; border-radius:50%; border:2px solid #d0d5dd; cursor:pointer; flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; transition:.2s; }
+  .task-check:hover { border-color:#5b5bd6; }
+  .task-check.done { background:#5b5bd6; border-color:#5b5bd6; }
+  .task-check.done::after { content:'✓'; color:#fff; font-size:11px; font-weight:700; }
+  .task-body { flex:1; }
+  .task-title { font-size:15px; font-weight:500; margin-bottom:4px; }
+  .task-title.done { text-decoration:line-through; color:#aaa; }
+  .task-meta { font-size:12px; color:#888; display:flex; gap:12px; flex-wrap:wrap; }
+  .status-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .s2  { background:#e8f4fd; color:#2b7ab8; }
+  .s3  { background:#fff3cd; color:#856404; }
+  .s4  { background:#d1ecf1; color:#0c5460; }
+  .s5  { background:#d4edda; color:#155724; }
+  .s6  { background:#f8d7da; color:#721c24; }
+  .s7  { background:#e2e3e5; color:#383d41; }
+
+  /* ── Projects ── */
+  .projects-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+  .project-card { background:#fff; border-radius:12px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,.06); cursor:pointer; border:2px solid transparent; transition:.2s; }
+  .project-card:hover { border-color:#5b5bd6; }
+  .project-card h3 { font-size:16px; margin-bottom:6px; }
+  .project-card p  { font-size:13px; color:#888; }
+  .badge-open   { background:#d4edda; color:#155724; }
+  .badge-closed { background:#e2e3e5; color:#383d41; }
+
+  /* ── Modal ── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:100; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#fff; border-radius:16px; padding:28px; width:100%; max-width:480px; box-shadow:0 8px 32px rgba(0,0,0,.18); }
+  .modal h2 { font-size:18px; margin-bottom:20px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#444; }
+  .form-group input, .form-group textarea, .form-group select {
+    width:100%; border:1.5px solid #d0d5dd; border-radius:8px; padding:10px 12px; font-size:14px; outline:none; font-family:inherit;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color:#5b5bd6; }
+  .form-group textarea { resize:vertical; min-height:80px; }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
+  .btn-cancel { background:none; border:1.5px solid #d0d5dd; border-radius:8px; padding:9px 18px; font-size:14px; cursor:pointer; }
+
+  /* ── Loading / Empty ── */
+  .loader { text-align:center; padding:60px; color:#888; font-size:15px; }
+  .spinner { display:inline-block; width:32px; height:32px; border:3px solid #e2e8f0; border-top-color:#5b5bd6; border-radius:50%; animation:spin .7s linear infinite; margin-bottom:12px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .empty { text-align:center; padding:60px; color:#aaa; font-size:15px; }
+  .toast { position:fixed; bottom:24px; right:24px; background:#1a1a2e; color:#fff; padding:12px 20px; border-radius:10px; font-size:14px; z-index:200; opacity:0; transition:.3s; pointer-events:none; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<!-- Setup -->
+<div id="setup">
+  <div class="setup-card">
+    <h1>Битрикс24</h1>
+    <p>Введите URL вашего вебхука. Он выглядит так:<br>
+       <code style="font-size:12px;color:#5b5bd6">https://hairsekta.bitrix24.ru/rest/7746/TOKEN/</code>
+    </p>
+    <input id="webhookInput" type="password" placeholder="https://hairsekta.bitrix24.ru/rest/7746/.../" />
+    <div class="err" id="setupErr"></div>
+    <button onclick="saveWebhook()">Подключить</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <header>
+    <h1>Битрикс24</h1>
+    <button class="tab-btn active" onclick="showTab('tasks',this)">Задачи</button>
+    <button class="tab-btn" onclick="showTab('projects',this)">Проекты</button>
+    <button class="reset-btn" onclick="resetWebhook()">Сменить токен</button>
+  </header>
+  <main>
+
+    <!-- Tasks tab -->
+    <div id="tab-tasks">
+      <div class="toolbar">
+        <input class="search-input" id="searchInput" placeholder="Поиск по названию..." oninput="filterTasks()">
+        <select id="statusFilter" onchange="filterTasks()">
+          <option value="">Все статусы</option>
+          <option value="2">Не начата</option>
+          <option value="3">Ждёт выполнения</option>
+          <option value="4">Выполняется</option>
+          <option value="5">Ждёт контроля</option>
+          <option value="6">Отложена</option>
+          <option value="7">Отклонена</option>
+        </select>
+        <select id="projectFilter" onchange="loadTasks()">
+          <option value="72">Проект #72 (основной)</option>
+          <option value="">Все проекты</option>
+        </select>
+        <button class="btn-primary" onclick="openCreateModal()">+ Задача</button>
+      </div>
+      <div id="tasksList"><div class="loader"><div class="spinner"></div><br>Загрузка...</div></div>
+    </div>
+
+    <!-- Projects tab -->
+    <div id="tab-projects" style="display:none">
+      <div class="toolbar">
+        <button class="btn-primary" onclick="loadProjects()">Обновить</button>
+      </div>
+      <div id="projectsList"><div class="loader"><div class="spinner"></div><br>Загрузка...</div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Create task modal -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <h2>Новая задача</h2>
+    <div class="form-group">
+      <label>Название *</label>
+      <input id="newTitle" placeholder="Что нужно сделать?">
+    </div>
+    <div class="form-group">
+      <label>Описание</label>
+      <textarea id="newDesc" placeholder="Подробности..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Дедлайн</label>
+      <input id="newDeadline" type="datetime-local">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Отмена</button>
+      <button class="btn-primary" onclick="createTask()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STATUS_LABELS = { 2:'Не начата', 3:'Ждёт выполнения', 4:'Выполняется', 5:'Ждёт контроля', 6:'Отложена', 7:'Отклонена' };
+let allTasks = [];
+let webhook = '';
+
+function getWebhook() {
+  return localStorage.getItem('b24_webhook') || '';
+}
+
+function saveWebhook() {
+  const val = document.getElementById('webhookInput').value.trim();
+  if (!val.includes('bitrix24')) {
+    document.getElementById('setupErr').textContent = 'Введите корректный URL вебхука';
+    return;
+  }
+  document.getElementById('setupErr').textContent = '';
+  localStorage.setItem('b24_webhook', val);
+  webhook = val;
+  startApp();
+}
+
+function resetWebhook() {
+  localStorage.removeItem('b24_webhook');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('setup').style.display = 'flex';
+}
+
+async function b24(method, params = {}) {
+  const url = webhook.replace(/\/$/, '') + '/' + method + '.json';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error_description || data.error);
+  return data.result;
+}
+
+function startApp() {
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadTasks();
+}
+
+function showTab(name, btn) {
+  document.getElementById('tab-tasks').style.display    = name === 'tasks'    ? '' : 'none';
+  document.getElementById('tab-projects').style.display = name === 'projects' ? '' : 'none';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (name === 'projects') loadProjects();
+}
+
+async function loadTasks() {
+  const projectId = document.getElementById('projectFilter').value;
+  document.getElementById('tasksList').innerHTML = '<div class="loader"><div class="spinner"></div><br>Загрузка...</div>';
+  try {
+    const filter = {};
+    if (projectId) filter.GROUP_ID = projectId;
+    const result = await b24('tasks.task.list', {
+      filter,
+      select: ['ID','TITLE','STATUS','DEADLINE','GROUP_ID'],
+      order: { CREATED_DATE: 'DESC' },
+      start: 0
+    });
+    allTasks = result.tasks || [];
+    filterTasks();
+  } catch(e) {
+    document.getElementById('tasksList').innerHTML = `<div class="empty">Ошибка: ${e.message}</div>`;
+  }
+}
+
+function filterTasks() {
+  const q      = document.getElementById('searchInput').value.toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  let tasks = allTasks.filter(t => {
+    const matchQ = !q || t.title.toLowerCase().includes(q);
+    const matchS = !status || String(t.status) === status;
+    return matchQ && matchS;
+  });
+  renderTasks(tasks);
+}
+
+function renderTasks(tasks) {
+  const el = document.getElementById('tasksList');
+  if (!tasks.length) { el.innerHTML = '<div class="empty">Задач не найдено</div>'; return; }
+  el.innerHTML = '<div class="tasks-grid">' + tasks.map(t => {
+    const s = parseInt(t.status);
+    const done = s === 5;
+    const label = STATUS_LABELS[s] || s;
+    const dl = t.deadline ? t.deadline.slice(0,10) : '';
+    return `<div class="task-card">
+      <div class="task-check ${done?'done':''}" onclick="toggleTask(${t.id},${done})" title="${done?'Открыть':'Завершить'}"></div>
+      <div class="task-body">
+        <div class="task-title ${done?'done':''}">${escHtml(t.title)}</div>
+        <div class="task-meta">
+          <span class="status-badge s${s}">${label}</span>
+          ${dl ? `<span>📅 ${dl}</span>` : ''}
+          <span>#${t.id}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+async function toggleTask(id, isDone) {
+  try {
+    if (isDone) {
+      await b24('tasks.task.update', { taskId: id, fields: { STATUS: 2 } });
+      toast('Задача открыта');
+    } else {
+      await b24('tasks.task.complete', { taskId: id });
+      toast('Задача завершена ✓');
+    }
+    loadTasks();
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+async function loadProjects() {
+  document.getElementById('projectsList').innerHTML = '<div class="loader"><div class="spinner"></div><br>Загрузка...</div>';
+  try {
+    const result = await b24('sonet_group.get', {
+      filter: { IS_EXTRANET: 'N' },
+      select: ['ID','NAME','DESCRIPTION','CLOSED','DATE_CREATE'],
+      order: { DATE_CREATE: 'DESC' }
+    });
+    const groups = Array.isArray(result) ? result : (result.groups || []);
+    if (!groups.length) { document.getElementById('projectsList').innerHTML = '<div class="empty">Проектов не найдено</div>'; return; }
+    document.getElementById('projectsList').innerHTML = '<div class="projects-grid">' + groups.map(g => `
+      <div class="project-card" onclick="goToProject(${g.ID})">
+        <h3>${escHtml(g.NAME || '')}</h3>
+        <p>${escHtml((g.DESCRIPTION||'').slice(0,80))}</p>
+        <p style="margin-top:8px">
+          <span class="status-badge ${g.CLOSED==='Y'?'badge-closed':'badge-open'}">${g.CLOSED==='Y'?'Закрыт':'Активен'}</span>
+          &nbsp; ID: ${g.ID}
+        </p>
+      </div>`).join('') + '</div>';
+  } catch(e) {
+    document.getElementById('projectsList').innerHTML = `<div class="empty">Ошибка: ${e.message}</div>`;
+  }
+}
+
+function goToProject(id) {
+  document.getElementById('projectFilter').value = id;
+  showTab('tasks', document.querySelectorAll('.tab-btn')[0]);
+}
+
+function openCreateModal() {
+  document.getElementById('createModal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('createModal').classList.remove('open');
+  document.getElementById('newTitle').value = '';
+  document.getElementById('newDesc').value  = '';
+  document.getElementById('newDeadline').value = '';
+}
+
+async function createTask() {
+  const title = document.getElementById('newTitle').value.trim();
+  if (!title) { toast('Введите название задачи'); return; }
+  const projectId = document.getElementById('projectFilter').value || '72';
+  const fields = { TITLE: title, GROUP_ID: projectId };
+  const desc = document.getElementById('newDesc').value.trim();
+  if (desc) fields.DESCRIPTION = desc;
+  const dl = document.getElementById('newDeadline').value;
+  if (dl) fields.DEADLINE = new Date(dl).toISOString();
+  try {
+    await b24('tasks.task.add', { fields });
+    toast('Задача создана!');
+    closeModal();
+    loadTasks();
+  } catch(e) { toast('Ошибка: ' + e.message); }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Init
+webhook = getWebhook();
+if (webhook) startApp();
+</script>
+</body>
+</html>
