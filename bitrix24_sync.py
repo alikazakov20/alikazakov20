@@ -2,9 +2,9 @@
 Bitrix24 Sync — работа с задачами и проектами через REST API.
 
 Использование:
-  python bitrix24_sync.py tasks list
-  python bitrix24_sync.py tasks list --project-id 5
-  python bitrix24_sync.py tasks create --title "Новая задача" --project-id 5
+  python bitrix24_sync.py tasks list                          # задачи проекта 72 (по умолчанию)
+  python bitrix24_sync.py tasks list --project-id 5          # другой проект
+  python bitrix24_sync.py tasks create --title "Задача"      # создать в проекте 72
   python bitrix24_sync.py tasks update --task-id 123 --status done
   python bitrix24_sync.py projects list
 """
@@ -245,6 +245,11 @@ def get_client() -> Bitrix24Client:
     return Bitrix24Client(webhook)
 
 
+def default_project_id() -> int | None:
+    val = os.getenv("BITRIX24_DEFAULT_PROJECT_ID")
+    return int(val) if val else None
+
+
 def main():
     parser = build_parser()
     args = parser.parse_args()
@@ -252,10 +257,13 @@ def main():
 
     if args.entity == "tasks":
         if args.action == "list":
+            project_id = getattr(args, "project_id", None) or default_project_id()
             tasks = client.get_tasks(
-                project_id=getattr(args, "project_id", None),
+                project_id=project_id,
                 responsible_id=getattr(args, "responsible_id", None),
             )
+            if project_id:
+                print(f"Проект ID={project_id}")
             print_tasks(tasks)
 
         elif args.action == "get":
@@ -263,10 +271,11 @@ def main():
             print(json.dumps(task, ensure_ascii=False, indent=2))
 
         elif args.action == "create":
+            project_id = getattr(args, "project_id", None) or default_project_id()
             task = client.create_task(
                 title=args.title,
                 description=args.description,
-                project_id=getattr(args, "project_id", None),
+                project_id=project_id,
                 responsible_id=getattr(args, "responsible_id", None),
                 deadline=getattr(args, "deadline", None),
             )
